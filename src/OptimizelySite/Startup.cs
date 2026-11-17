@@ -6,6 +6,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OptimizelySite.Lab;
+using Reignite.Profiler.AspNetCore;
+using Reignite.Profiler.Extensions;
 
 namespace OptimizelySite
 {
@@ -28,6 +30,12 @@ namespace OptimizelySite
             }
 
             services.Configure<LabOptions>(_configuration.GetSection(LabOptions.SectionName));
+
+            // Collect a trace/dump when a configured metric threshold is crossed, and
+            // upload it to the Reignite api for the application/key in Performance:Profiler.
+            services.AddProfiler(_configuration);
+            services.AddProfilerBackgroundService();
+
             services.AddMvc();
             services.AddCms()
                 .AddCmsAspNetIdentity<ApplicationUser>();

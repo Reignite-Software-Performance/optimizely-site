@@ -8,6 +8,22 @@
   <ItemGroup>
     <PackageReference Include="EPiServer.CMS" Version="12.35.0" />
     <PackageReference Include="Reignite.Profiler.AspNetCore" Version="1.0.0" />
+    <!-- Carries Reignite.Client 1.1.x, which the profiler's AddProfiler resolves at runtime. -->
+    <PackageReference Include="Reignite.Client.Web" Version="1.1.5" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
+
+  <!--
+    Reignite.Client.Profiler bundles an old Reignite.Client 1.0.0.0 and wins the asset
+    conflict at publish, but Reignite.Profiler.Extensions.AddProfiler was compiled
+    against 1.1.0.0 and throws FileNotFoundException at startup. Substitute the
+    Reignite.Client.Web copy (1.1.3.0, a compatible higher version) after publish.
+  -->
+  <Target Name="ReplaceBundledReigniteClient" AfterTargets="Publish">
+    <Copy
+      SourceFiles="$(NuGetPackageRoot)reignite.client.web/1.1.5/lib/net8.0/Reignite.Client.dll"
+      DestinationFolder="$(PublishDir)"
+      OverwriteReadOnlyFiles="true"
+      SkipUnchangedFiles="false" />
+  </Target>
 </Project>

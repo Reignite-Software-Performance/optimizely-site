@@ -2,18 +2,22 @@
 using EPiServer.Web.Routing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OptimizelySite.Lab;
 
 namespace OptimizelySite
 {
     public class Startup
     {
         private readonly IWebHostEnvironment _webHostingEnvironment;
+        private readonly IConfiguration _configuration;
 
-        public Startup(IWebHostEnvironment webHostingEnvironment)
+        public Startup(IWebHostEnvironment webHostingEnvironment, IConfiguration configuration)
         {
             _webHostingEnvironment = webHostingEnvironment;
+            _configuration = configuration;
         }
 
         public void ConfigureServices(IServiceCollection services)
@@ -23,6 +27,7 @@ namespace OptimizelySite
                 //Add development configuration
             }
 
+            services.Configure<LabOptions>(_configuration.GetSection(LabOptions.SectionName));
             services.AddMvc();
             services.AddCms()
                 .AddCmsAspNetIdentity<ApplicationUser>();
@@ -50,6 +55,7 @@ namespace OptimizelySite
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapContent();
+                endpoints.MapLabEndpoints();
             });
         }
     }

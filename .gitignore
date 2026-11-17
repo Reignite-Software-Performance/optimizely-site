@@ -3,5 +3,9 @@ obj/
 .vs/
 *.user
 .env.local
+.env.lab
+.env.webchat
+.lab-url
 appsettings.Production.json
 publish/
+publish.zip

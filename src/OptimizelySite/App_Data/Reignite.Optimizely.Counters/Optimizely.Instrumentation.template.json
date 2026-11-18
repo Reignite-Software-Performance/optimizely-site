@@ -1,0 +1,271 @@
+{
+  "_comment": [
+    "Reignite.Optimizely.Counters - settings template for CMS 12 and CMS 13.",
+    "",
+    "Merge the 'Optimizely' block below into your site's appsettings.json. Every value shown is",
+    "the default, so a site that copies this file wholesale behaves exactly as it does with no",
+    "configuration at all - delete the lines you are not changing.",
+    "",
+    "Keys beginning with an underscore are comments and are ignored. Anything else the package",
+    "does not recognise is logged as a warning at startup, so a typo is visible rather than silent.",
+    "",
+    "This is a different section from Optimizely:PerformanceCounters, which belongs to",
+    "Reignite.Optimizely.DotNetCounters. The two packages are usually installed together and",
+    "configured separately."
+  ],
+
+  "Optimizely": {
+    "Instrumentation": {
+      "_comment_Enabled": [
+        "The master switch. False and nothing is decorated, no probe starts and no counter is",
+        "registered with Application Insights - the modules log one line each and return. It is",
+        "here so that an operator suspecting this package during an incident can rule it out with",
+        "a setting rather than a deployment."
+      ],
+      "Enabled": true,
+
+      "Probes": {
+        "_comment": [
+          "The four probes measure conditions nothing publishes a counter for. Each can be turned",
+          "off on its own. GarbageCollection and Contention need .NET 6 or later and never run on",
+          "CMS 11 whatever they are set to; CacheLock finds nothing on CMS 11 for the same reason",
+          "the cascade counters are absent there."
+        ],
+
+        "ThreadPool": {
+          "Enabled": true,
+          "_comment_SampleIntervalSeconds": "Each sample is one queued work item.",
+          "SampleIntervalSeconds": 5,
+          "_comment_SampleTimeoutSeconds": "A sample that does not finish inside this is recorded as starvation.",
+          "SampleTimeoutSeconds": 10,
+          "_comment_SlowSampleThresholdMilliseconds": "Delay above which a sample is also logged.",
+          "SlowSampleThresholdMilliseconds": 100,
+          "LogsPerMinute": 4
+        },
+
+        "GarbageCollection": {
+          "Enabled": true,
+          "SampleIntervalSeconds": 5,
+          "_comment_SlowPauseThresholdMilliseconds": "Pause above which a sample is also logged.",
+          "SlowPauseThresholdMilliseconds": 200,
+          "LogsPerMinute": 4
+        },
+
+        "Contention": {
+          "Enabled": true,
+          "_comment_BurstCaptureEnabled": [
+            "False leaves the contention rate running and stops the short capture bursts that",
+            "measure how long the waits were. The rate is the free half of the probe."
+          ],
+          "BurstCaptureEnabled": true,
+          "SampleIntervalSeconds": 5,
+          "_comment_BurstTriggerContentionsPerSecond": [
+            "Contention is normal and a busy site produces a steady background rate. The default",
+            "sits well above it, so a burst means something changed."
+          ],
+          "BurstTriggerContentionsPerSecond": 500,
+          "BurstDurationSeconds": 3,
+          "BurstCooldownSeconds": 300,
+          "MaxBurstsPerHour": 6,
+          "MaxSamplesPerBurst": 20000,
+          "LogsPerMinute": 2
+        },
+
+        "CacheLock": {
+          "_comment_Enabled": [
+            "The switch for the only reflection over Optimizely internals in the package. False",
+            "loses the four Optimizely.CMS.Cache.Lock* counters and nothing else."
+          ],
+          "Enabled": true,
+          "SampleIntervalSeconds": 2,
+          "_comment_QueueDepthThreshold": "Total queue depth above which a sample is logged. Zero silences the log.",
+          "QueueDepthThreshold": 10,
+          "LogsPerMinute": 4
+        }
+      },
+
+      "Cache": {
+        "Cascade": {
+          "_comment_Enabled": [
+            "False leaves IMemoryCache undecorated, which removes the cost as well as the nine",
+            "cascade counters. Cache hit, miss and invalidation rates are measured a layer up and",
+            "are unaffected. Has no effect on CMS 11, which has no IMemoryCache under its object",
+            "cache to count at."
+          ],
+          "Enabled": true,
+          "_comment_LargeRemovalThreshold": [
+            "A counter cannot carry a cache key, so a cascade this size or larger is also written",
+            "to the log, naming the key responsible. That is the only way to find out which key is",
+            "collapsing the cache."
+          ],
+          "LargeRemovalThreshold": 1000,
+          "LogLargeRemovals": true,
+          "LargeRemovalLogsPerMinute": 10,
+          "_comment_FailureThreshold": "Consecutive failures after which the recorder switches itself off for the process.",
+          "FailureThreshold": 20
+        }
+      },
+
+      "Logging": {
+        "_comment": [
+          "The log write rate counters. Not under Probes, because this is not a probe: a probe",
+          "looks on its own thread, and this counts on whichever thread wrote the log entry.",
+          "",
+          "On CMS 12 and CMS 13 the counting is done by an ILoggerProvider named",
+          "OptimizelyLogWriteRate, which sees every write the host's logging dispatches. It counts",
+          "at the host's default minimum level; to widen what it sees without changing what any",
+          "real sink writes, set Logging:OptimizelyLogWriteRate:LogLevel:Default in the standard",
+          "ASP.NET Core logging section. On CMS 11 the same counters come from a log4net appender",
+          "instead and this switch controls both.",
+          "",
+          "False loses the three Optimizely.Runtime.Logging.* counters and nothing else. The",
+          "provider is then not registered at all, so it costs the site nothing."
+        ],
+        "Enabled": true
+      },
+
+      "Http": {
+        "_comment": [
+          "Outbound response cacheability. Every response the site sends is classified from its",
+          "Cache-Control and Expires headers as the headers go out, and the nine",
+          "Optimizely.Runtime.Http.* counters report the mix once a minute: what share of responses",
+          "is shared-cacheable, browser-only, revalidating, no-store, or says nothing at all.",
+          "",
+          "The one thing here that is not a number is the shared-cache conflict: a response marked",
+          "public that also sets a cookie. No shared cache will store it, so the cache headers on",
+          "that route are buying nothing - and from the origin's side the traffic that results",
+          "looks like ordinary traffic.",
+          "",
+          "Not under Probes, for the same reason Logging is not: nothing goes looking. The counting",
+          "happens on the thread that is about to write the response, and costs a header read and",
+          "two or three interlocked increments.",
+          "",
+          "On CMS 12 and CMS 13 the measurement is middleware, registered first in the pipeline so",
+          "that it sees the finished header set; on CMS 11 it is an HTTP module that the package",
+          "adds to the pipeline itself, so there is nothing to put in web.config. Integrated mode",
+          "only - classic mode has no managed response header collection to read."
+        ],
+        "Enabled": true,
+
+        "_comment_LogSharedCacheConflicts": [
+          "A counter cannot carry a route, so a conflicting response is also written to the log,",
+          "naming the path that produced it. That is the only way to find the code responsible.",
+          "The path is logged without its query string, deliberately. False keeps the counter and",
+          "stops the log line, which is what a site that knows about the conflict wants."
+        ],
+        "LogSharedCacheConflicts": true,
+        "_comment_SharedCacheConflictLogsPerMinute": [
+          "One misconfigured route serving steadily would otherwise write the same sentence on",
+          "every request. Zero silences the log as completely as the switch above."
+        ],
+        "SharedCacheConflictLogsPerMinute": 5,
+        "_comment_FailureThreshold": "Consecutive failures after which the recorder switches itself off for the process.",
+        "FailureThreshold": 20
+      },
+
+      "Meter": {
+        "_comment": [
+          "The only switch in this file that is not about a measurement. Everything else decides",
+          "whether a counter is produced; this decides how the counters that are produced leave",
+          "the process.",
+          "",
+          "Every counter is published twice: to the Optimizely-Performance EventSource, and to a",
+          "System.Diagnostics.Metrics meter of the same name carrying the same counter names. The",
+          "meter is the only path that reaches OpenTelemetry, UseAzureMonitor() or Application",
+          "Insights SDK 3.x - none of which collect EventCounters at all, because the",
+          "EventCounterCollector package stopped at 2.23.0 and has no 3.x. Subscribe with one line:",
+          "  .WithMetrics(m => m.AddMeter(\"Optimizely-Performance\"))",
+          "",
+          "Defaults to true because the failure it prevents is silent: with the meter off, a site",
+          "on any of those hosts publishes every counter to nobody and nothing says so. Leaving it",
+          "on where nothing collects meters costs a call that returns on a disabled instrument.",
+          "",
+          "Ignored on CMS 11, which has no System.Diagnostics.Metrics. The setting is left here so",
+          "one settings file serves all three majors."
+        ],
+        "Enabled": true
+      },
+
+      "Deployment": {
+        "_comment": [
+          "The only node in this file that is not about a counter. Everything else measures the",
+          "running site; this records what was deployed, so a change in one can be attributed to",
+          "a change in the other.",
+          "",
+          "At startup and on a heartbeat the bin folder is scanned and reduced to a 16-character",
+          "fingerprint over every assembly's identity - its MVID, the compiler's own id for the",
+          "exact bits, so a rebuild of the same version reads as a change and a version bump",
+          "without a rebuild does not. Four events go to Application Insights under names starting",
+          "OptiCounters., and the fingerprint is also stamped onto every request, dependency and",
+          "exception the site sends as a DeploymentFingerprint custom dimension. Grouping any chart",
+          "by that dimension is what makes 'did the release cause this' a query rather than an",
+          "argument about timestamps.",
+          "",
+          "False emits nothing, stamps nothing and does not scan."
+        ],
+        "Enabled": true,
+
+        "_comment_StatePath": [
+          "Where the last manifest is kept, so the next start can diff against it. Empty means",
+          "probe for somewhere writable in order - App Service's /home/data, then ProgramData,",
+          "then the temporary directory - and report on every event which one won and whether it",
+          "survives a deployment.",
+          "",
+          "Worth setting only if you have somewhere that genuinely outlives a deployment, such as",
+          "a mounted share. On DXP the container is replaced wholesale on every release, so no",
+          "path inside it is durable and every start reports as a baseline rather than a diff -",
+          "which is why the manifest event carries the fingerprint on every row. The comparison",
+          "happens in the query instead, and needs no state at all."
+        ],
+        "StatePath": "",
+
+        "_comment_InventoryMode": [
+          "When the one-row-per-assembly listing is emitted. OnChange sends it once per process",
+          "start, again whenever the fingerprint changes, and again every InventoryReemitHours so",
+          "the answer never ages out of retention. Always adds every heartbeat, which is the same",
+          "few hundred rows over and over - useful while proving the feature out, expensive as a",
+          "standing setting. Never keeps the manifest and the change events and drops the listing,",
+          "which loses the ability to answer what a given fingerprint actually contained."
+        ],
+        "InventoryMode": "OnChange",
+
+        "_comment_HeartbeatMinutes": [
+          "How often the bin folder is rescanned. This is also how quickly an out-of-band change -",
+          "a hotfixed DLL copied onto one instance - is noticed, and how long after a rolling",
+          "deployment the fleet is confirmed to have converged."
+        ],
+        "HeartbeatMinutes": 15,
+        "InventoryReemitHours": 168,
+
+        "_comment_IncludeSystemAssemblies": [
+          "False drops System.* and Microsoft.* from the scan, which makes the inventory shorter",
+          "and the fingerprint blind to a runtime patch. Whatever this is set to, set it the same",
+          "on every instance: two instances scanning to different rules report as diverged."
+        ],
+        "IncludeSystemAssemblies": true,
+
+        "_comment_IncludeFilePaths": [
+          "False by default. The file name and version identify an assembly; the full path adds",
+          "the host's directory layout to telemetry that is otherwise about the deployment."
+        ],
+        "IncludeFilePaths": false,
+
+        "_comment_StampTelemetry": [
+          "The DeploymentFingerprint dimension on every telemetry item. False keeps the events and",
+          "loses the join - the events would then say what changed and when, and nothing would",
+          "connect that to a request. application_Version is left to the host either way."
+        ],
+        "StampTelemetry": true,
+
+        "_comment_MaxChangeEvents": [
+          "A cap on the per-assembly change rows one transition can emit. A first start on a host",
+          "with no durable state is a baseline and emits none; a genuine framework upgrade can",
+          "change hundreds. Hitting the cap is written to the log."
+        ],
+        "MaxChangeEvents": 200,
+        "_comment_MaxAssemblies": "A cap on the scan itself. A truncated scan says so on the manifest event.",
+        "MaxAssemblies": 2000
+      }
+    }
+  }
+}

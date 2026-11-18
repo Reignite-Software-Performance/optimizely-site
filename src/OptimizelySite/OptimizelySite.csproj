@@ -17,6 +17,9 @@
     <!-- Carries Reignite.Client 1.1.x, which the profiler's AddProfiler resolves at runtime. -->
     <PackageReference Include="Reignite.Client.Web" Version="1.1.5" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
+    <!-- Reignite counters: CMS/Commerce instrumentation (pulls Core and DotNetCounters
+         transitively). No configuration is required; every counter has a default. -->
+    <PackageReference Include="Reignite.Optimizely.Counters.CMS" Version="1.0.0" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
 

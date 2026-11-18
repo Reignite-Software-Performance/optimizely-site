@@ -9,3 +9,4 @@ obj/
 appsettings.Production.json
 publish/
 publish.zip
+src/OptimizelySite/modules/

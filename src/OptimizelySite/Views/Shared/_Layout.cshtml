@@ -1,0 +1,87 @@
+@{
+    var requestPath = Context.Request.Path.Value ?? string.Empty;
+    var isPreview = requestPath.StartsWith("/preview", StringComparison.OrdinalIgnoreCase);
+    var basePath = ViewData["BasePath"] as string ?? (isPreview ? "/preview" : string.Empty);
+    var labPath = ViewData["LabPath"] as string ?? (isPreview ? "/preview/lab" : "/diagnostics-lab");
+    var homePath = string.IsNullOrEmpty(basePath) ? "/" : basePath;
+    string Link(string path) => string.IsNullOrEmpty(basePath) ? path : basePath + path;
+    var pageTitle = ViewData["Title"] as string;
+    var fullTitle = string.IsNullOrWhiteSpace(pageTitle)
+        ? "Reignite × Optimizely — performance engineering"
+        : $"{pageTitle} · Reignite × Optimizely";
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@fullTitle</title>
+    <meta name="description" content="Reignite performance engineering for Optimizely CMS and Commerce — traces, dumps, a diagnostics control plane, and a Teams diagnostics bot.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="container site-header__inner">
+            <a class="brand" href="@homePath" aria-label="Reignite and Optimizely">
+                <span class="brand-chip"><img src="/images/reignite-logo.webp" alt="Reignite"></span>
+                <span class="brand-x">×</span>
+                <span class="brand-opt"><span class="dot"></span>Optimizely</span>
+            </a>
+            <nav class="site-nav" aria-label="Primary">
+                <a href="@homePath">Home</a>
+                <a href="@Link("/about")">About</a>
+                <a href="@Link("/contact")">Contact</a>
+                <a href="@labPath">Diagnostics Lab</a>
+                <a class="nav-cta" href="@Link("/contact")">Talk to us</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a class="brand" href="@homePath">
+                        <span class="brand-chip"><img src="/images/reignite-logo.webp" alt="Reignite"></span>
+                        <span class="brand-x">×</span>
+                        <span class="brand-opt"><span class="dot"></span>Optimizely</span>
+                    </a>
+                    <p>Performance engineering for Optimizely delivery. We find the milliseconds, prove the fix, and keep production under observation.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Platform</h4>
+                    <a href="@Link("/about")">Profiler</a>
+                    <a href="@Link("/about")">Diagnostics control plane</a>
+                    <a href="@Link("/about")">Teams diagnostics bot</a>
+                    <a href="@labPath">Diagnostics Lab</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Company</h4>
+                    <a href="@Link("/about")">About</a>
+                    <a href="@Link("/contact")">Contact</a>
+                    <a href="@Link("/about")">Partners</a>
+                    <a href="@Link("/contact")">Careers</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <a href="@Link("/about")">Privacy</a>
+                    <a href="@Link("/about")">Terms</a>
+                    <a href="@Link("/about")">Security</a>
+                    <a href="@Link("/about")">Status</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>© 2026 Reignite Software Performance, LLC · Charleston, South Carolina</span>
+                <span class="legal"><span>Built on Optimizely CMS 12</span><span>·</span><span>Powered by Reignite</span></span>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

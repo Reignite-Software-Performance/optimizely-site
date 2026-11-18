@@ -1,96 +1,95 @@
 @model OptimizelySite.Models.Pages.LabPage
 @{
-    Layout = null;
+    Layout = "_Layout";
+    ViewData["Title"] = "Diagnostics Lab";
 }
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@Model.Heading · Optimizely</title>
-    <style>
-        body { font: 16px/1.6 system-ui, sans-serif; margin: 0; color: #111827; background: #f8fafc; }
-        header { background: #0f172a; color: #e5e7eb; padding: 1rem 2rem; }
-        nav a { color: #e5e7eb; margin-right: 1.25rem; text-decoration: none; font-weight: 600; }
-        nav a:hover { text-decoration: underline; }
-        main { max-width: 58rem; margin: 3rem auto; padding: 0 1.5rem; }
-        h1 { font-size: 2.25rem; line-height: 1.15; }
-        .key-row { display: flex; gap: .75rem; align-items: center; margin: 1.5rem 0; }
-        input[type=password] { padding: .55rem .7rem; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 22rem; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .75rem; }
-        button { text-align: left; padding: .8rem 1rem; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; cursor: pointer; font: inherit; }
-        button:hover { border-color: #2563eb; }
-        button strong { display: block; }
-        button span { color: #6b7280; font-size: .875rem; }
-        pre { background: #0f172a; color: #e5e7eb; padding: 1rem; border-radius: 10px; overflow: auto; max-height: 24rem; white-space: pre-wrap; }
-        .muted { color: #6b7280; }
-    </style>
-</head>
-<body>
-    <header>
-        <nav>
-            <a href="/">Home</a>
-            <a href="/about">About</a>
-            <a href="/contact">Contact</a>
-            <a href="/diagnostics-lab">Diagnostics Lab</a>
-        </nav>
-    </header>
-    <main>
+<section class="lab-hero">
+    <div class="container">
+        <span class="eyebrow"><span class="spark"></span>Operator console</span>
         <h1>@Model.Heading</h1>
-        @Html.Raw(Model.Introduction?.ToHtmlString() ?? string.Empty)
-
-        <div class="key-row">
-            <label for="lab-key"><strong>Operator key</strong></label>
-            <input id="lab-key" type="password" autocomplete="off" placeholder="Lab key (never stored in content)">
-            <button id="health" type="button">Check health</button>
+        <p style="color: var(--muted); max-width: 52rem;">
+            @Html.Raw(Model.Introduction?.ToHtmlString() ?? "Trigger deliberate faults on this live Optimizely site and watch them surface in the diagnostics bot.")
+        </p>
+        <div class="lab-controls">
+            <label for="lab-key">Operator key</label>
+            <input id="lab-key" type="password" autocomplete="off" placeholder="Held only in this browser session">
+            <button class="btn btn--ghost" id="health" type="button">Check health</button>
+            <span class="hint">Key-gated. Never stored in content.</span>
         </div>
-        <p class="muted">The key is held only in this browser session and sent to the key-gated <code>/lab</code> endpoints.</p>
+    </div>
+</section>
 
-        <div class="grid" id="faults">
-            <button data-path="/lab/memory?mb=128&hold=10" type="button"><strong>Memory pressure</strong><span>Hold 128 MB for 10 s</span></button>
-            <button data-path="/lab/cpu?seconds=10" type="button"><strong>CPU burn</strong><span>Saturate a core for 10 s</span></button>
-            <button data-path="/lab/threads?count=32&hold=10" type="button"><strong>Thread-pool starvation</strong><span>Block 32 workers for 10 s</span></button>
-            <button data-path="/lab/alloc?mb=16&seconds=10" type="button"><strong>Allocation / GC pressure</strong><span>Churn 16 MB / 100 ms for 10 s</span></button>
-            <button data-path="/lab/exception" type="button"><strong>Unhandled exception</strong><span>Throw on purpose</span></button>
-            <button data-path="/lab/slow-sql?ms=5000" type="button"><strong>Slow SQL</strong><span>WAITFOR 5 s on EPiServerDB</span></button>
-            <button data-path="/lab/content-storm?count=2000" type="button"><strong>Content retrieval storm</strong><span>2,000 uncached GetChildren calls</span></button>
-            <button data-path="/lab/content-tree?depth=50" type="button"><strong>Content tree traversal</strong><span>Walk 50 levels of the content tree</span></button>
-            <button data-path="/lab/content-cache" type="button"><strong>Content cache stampede</strong><span>Clear the CMS cache and re-read</span></button>
-            <button data-path="/lab/url-storm?count=500" type="button"><strong>URL routing storm</strong><span>Resolve 500 content URLs</span></button>
-            <button data-path="/lab/service-bus?count=100" type="button"><strong>Service Bus storm</strong><span>Publish 100 messages</span></button>
+<section class="container">
+    <div class="lab-groups">
+        <div class="lab-group lab-group--runtime">
+            <div class="lab-group__head"><h3><i></i>Runtime</h3><span class="meta">.NET / CLR / SQL</span></div>
+            <div class="fault-grid">
+                <button class="fault" data-path="/lab/memory?mb=128&hold=10" type="button"><strong>Memory pressure</strong><span>Retain 128 MB for 10 s</span></button>
+                <button class="fault" data-path="/lab/cpu?seconds=10" type="button"><strong>CPU burn</strong><span>Saturate a core for 10 s</span></button>
+                <button class="fault" data-path="/lab/threads?count=32&hold=10" type="button"><strong>Thread-pool starvation</strong><span>Block 32 workers for 10 s</span></button>
+                <button class="fault" data-path="/lab/alloc?mb=16&seconds=10" type="button"><strong>Allocation / GC pressure</strong><span>Churn 16 MB / 100 ms</span></button>
+                <button class="fault" data-path="/lab/exception" type="button"><strong>Unhandled exception</strong><span>Throw on purpose</span></button>
+                <button class="fault" data-path="/lab/slow-sql?ms=5000" type="button"><strong>Slow SQL</strong><span>WAITFOR 5 s on EPiServerDB</span></button>
+            </div>
         </div>
 
-        <h2>Result</h2>
-        <pre id="out">No fault triggered yet.</pre>
-    </main>
-    <script>
-        (function () {
-            const keyInput = document.getElementById('lab-key');
-            const out = document.getElementById('out');
-            keyInput.value = sessionStorage.getItem('labKey') || '';
-            keyInput.addEventListener('change', function () {
-                sessionStorage.setItem('labKey', keyInput.value);
-            });
+        <div class="lab-group lab-group--cms">
+            <div class="lab-group__head"><h3><i></i>Optimizely delivery</h3><span class="meta">CMS content graph / routing</span></div>
+            <div class="fault-grid">
+                <button class="fault" data-path="/lab/content-storm?count=2000" type="button"><strong>Content retrieval storm</strong><span>2,000 uncached GetChildren</span></button>
+                <button class="fault" data-path="/lab/content-tree?depth=50" type="button"><strong>Content tree traversal</strong><span>Walk 50 levels uncached</span></button>
+                <button class="fault" data-path="/lab/content-cache" type="button"><strong>Content cache stampede</strong><span>Clear cache, then re-read</span></button>
+                <button class="fault" data-path="/lab/url-storm?count=500" type="button"><strong>URL routing storm</strong><span>Resolve 500 content URLs</span></button>
+            </div>
+        </div>
 
-            async function run(path) {
-                const key = keyInput.value;
-                const separator = path.includes('?') ? '&' : '?';
-                const url = key ? path + separator + 'key=' + encodeURIComponent(key) : path;
-                out.textContent = 'Running ' + path + '…';
-                try {
-                    const response = await fetch(url, { method: 'GET' });
-                    const body = await response.text();
-                    out.textContent = 'HTTP ' + response.status + ' in ' + Math.round(performance.now()) + ' ms\n\n' + body.slice(0, 4000);
-                } catch (error) {
-                    out.textContent = 'Request failed: ' + error;
-                }
+        <div class="lab-group lab-group--messaging">
+            <div class="lab-group__head"><h3><i></i>Messaging</h3><span class="meta">Service Bus</span></div>
+            <div class="fault-grid">
+                <button class="fault" data-path="/lab/service-bus?count=100" type="button"><strong>Service Bus storm</strong><span>Publish 100 messages</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="terminal">
+        <div class="terminal__bar">
+            <span class="lights"><i></i><i></i><i></i></span>
+            <span>lab-results</span>
+        </div>
+        <pre id="out">No fault triggered yet. Enter the operator key and pick a scenario above.</pre>
+    </div>
+
+    <p class="note">Every scenario is bounded by the server’s <code>Lab</code> settings and key-gated. The Service Bus storm requires <code>Lab__ServiceBusConnection</code> and <code>Lab__ServiceBusQueue</code>; until they are set it reports “not configured”.</p>
+</section>
+
+<script>
+    (function () {
+        const keyInput = document.getElementById('lab-key');
+        const out = document.getElementById('out');
+        keyInput.value = sessionStorage.getItem('labKey') || '';
+        keyInput.addEventListener('change', function () {
+            sessionStorage.setItem('labKey', keyInput.value);
+        });
+
+        async function run(path) {
+            const key = keyInput.value;
+            const separator = path.includes('?') ? '&' : '?';
+            const url = key ? path + separator + 'key=' + encodeURIComponent(key) : path;
+            out.textContent = 'Running ' + path + '…';
+            const started = performance.now();
+            try {
+                const response = await fetch(url, { method: 'GET' });
+                const body = await response.text();
+                const elapsed = Math.round(performance.now() - started);
+                out.textContent = 'HTTP ' + response.status + ' in ' + elapsed + ' ms\n\n' + body.slice(0, 4000);
+            } catch (error) {
+                out.textContent = 'Request failed: ' + error;
             }
+        }
 
-            document.getElementById('health').addEventListener('click', function () { run('/lab/health'); });
-            document.querySelectorAll('#faults button[data-path]').forEach(function (button) {
-                button.addEventListener('click', function () { run(button.getAttribute('data-path')); });
-            });
-        })();
-    </script>
-</body>
-</html>
+        document.getElementById('health').addEventListener('click', function () { run('/lab/health'); });
+        document.querySelectorAll('.fault[data-path]').forEach(function (button) {
+            button.addEventListener('click', function () { run(button.getAttribute('data-path')); });
+        });
+    })();
+</script>

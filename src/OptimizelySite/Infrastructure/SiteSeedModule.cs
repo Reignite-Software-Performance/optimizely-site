@@ -1,27 +1,34 @@
 using EPiServer;
+using EPiServer.Applications;
 using EPiServer.Core;
 using EPiServer.DataAccess;
 using EPiServer.Framework;
 using EPiServer.Framework.Initialization;
 using EPiServer.Security;
 using EPiServer.ServiceLocation;
-using EPiServer.Web;
 using Microsoft.Extensions.Configuration;
 using OptimizelySite.Models.Pages;
 
 namespace OptimizelySite.Infrastructure;
 
 /// <summary>
-/// Creates the site definition and a small content tree the first time the app
+/// Creates the site application and a small content tree the first time the app
 /// starts against an empty database, so the host serves an actual Optimizely
-/// site instead of a 404. Idempotent: existing content and an existing site
-/// definition are reused.
+/// site instead of a 404. Idempotent: existing content and an existing website
+/// application are reused.
 /// </summary>
+/// <remarks>
+/// CMS 13 replaced the old <c>ISiteDefinitionRepository</c> surface with the
+/// application model. A routable site is an <see cref="Website"/>, saved through
+/// <see cref="IApplicationRepository"/>; the seed root is the site's content
+/// folder and the entry point is the start page.
+/// </remarks>
 [InitializableModule]
 [ModuleDependency(typeof(EPiServer.Web.InitializationModule))]
 public class SiteSeedModule : IInitializableModule
 {
-    private const string SiteName = "Optimizely Site";
+    private const string ApplicationName = "optimizely-site";
+    private const string SiteDisplayName = "Optimizely Site";
     private const string RootFolderName = "Sites";
 
     private static readonly object Gate = new();
@@ -41,98 +48,99 @@ public class SiteSeedModule : IInitializableModule
                 return;
             }
 
-            // CMS 13 replaces ISiteDefinitionRepository with IApplicationRepository and
-            // throws "Use IApplicationRepository instead" from the old surface. The content
-            // and site definition were created under CMS 12 and persist, so skip re-seeding.
-            var cmsMajor = typeof(EPiServer.Core.ContentReference).Assembly.GetName().Version?.Major ?? 0;
-            if (cmsMajor >= 13)
-            {
-                _seeded = true;
-                return;
-            }
-
             var contentRepository = context.Locate.Advanced.GetInstance<IContentRepository>();
-            var contentLoader = context.Locate.Advanced.GetInstance<IContentLoader>();
-            var siteRepository = context.Locate.Advanced.GetInstance<ISiteDefinitionRepository>();
+            var applicationRepository = context.Locate.Advanced.GetInstance<IApplicationRepository>();
             var configuration = context.Locate.Advanced.GetInstance<IConfiguration>();
 
             // Optimizely expects a content-root folder under the system root; a start
             // page placed directly under the system root does not resolve.
             var folderLink = EnsureRootFolder(contentRepository);
-            var site = siteRepository.List().FirstOrDefault(candidate => candidate.Name == SiteName);
-
-            if (site is not null)
-            {
-                var writable = site.CreateWritableClone();
-                var start = contentLoader.Get<PageData>(writable.StartPage);
-                if (start is not null && start.ParentLink == ContentReference.RootPage)
-                {
-                    contentRepository.Move(writable.StartPage, folderLink, AccessLevel.NoAccess, AccessLevel.NoAccess);
-                }
-
-                ApplyHosts(configuration, writable);
-                siteRepository.Save(writable);
-                _seeded = true;
-                return;
-            }
-
             var startLink = EnsureStartPage(contentRepository, folderLink);
             EnsureStandardPage(contentRepository, startLink, "About", "About this site",
-                "An Optimizely CMS 12 site instrumented for performance diagnostics.");
+                "An Optimizely CMS 13 site instrumented for performance diagnostics.");
             EnsureStandardPage(contentRepository, startLink, "Contact", "Contact",
                 "Reach the Reignite diagnostics team.");
             EnsureLabPage(contentRepository, startLink);
 
-            var newSite = new SiteDefinition
+            var hosts = BuildHosts(configuration);
+            var existing = applicationRepository.List()
+                .FirstOrDefault(candidate =>
+                    string.Equals(candidate.Name, ApplicationName, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(candidate.DisplayName, SiteDisplayName, StringComparison.OrdinalIgnoreCase));
+
+            if (existing is null)
             {
-                Name = SiteName,
-                StartPage = startLink
-            };
-            ApplyHosts(configuration, newSite);
-            siteRepository.Save(newSite);
+                var website = new Website(ApplicationName, folderLink)
+                {
+                    DisplayName = SiteDisplayName,
+                    EntryPoint = startLink
+                };
+                foreach (var host in hosts)
+                {
+                    website.Hosts.Add(host);
+                }
+
+                applicationRepository.SaveAsync(website, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+                applicationRepository.EnableAssetsAsync(website, true, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+                applicationRepository.MakeDefaultAsync(website, true, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+            }
+            else if (existing is Website website)
+            {
+                var changed = website.EntryPoint != startLink || !HostsMatch(website.Hosts, hosts);
+                if (changed)
+                {
+                    website.EntryPoint = startLink;
+                    website.Hosts.Clear();
+                    foreach (var host in hosts)
+                    {
+                        website.Hosts.Add(host);
+                    }
+
+                    applicationRepository.SaveAsync(website, CancellationToken.None)
+                        .GetAwaiter().GetResult();
+                }
+            }
+
             _seeded = true;
         }
     }
 
     /// <summary>
-    /// Applies the host bindings from configuration. Defaults target the public
-    /// custom domain; a local run sets Site:PrimaryHost/Site:SiteUrl so the same
-    /// site definition serves localhost without a license.
+    /// Builds the host bindings from configuration. Defaults target the public
+    /// custom domain; a local run sets Site:PrimaryHost so the same application
+    /// serves localhost without a license.
     /// </summary>
-    private static void ApplyHosts(IConfiguration configuration, SiteDefinition site)
+    private static List<ApplicationHost> BuildHosts(IConfiguration configuration)
     {
-        var siteUrl = new Uri(configuration["Site:SiteUrl"] ?? "https://optimizely.reigniteperformance.com/");
         var primaryHost = configuration["Site:PrimaryHost"] ?? "optimizely.reigniteperformance.com";
         var editHost = configuration["Site:EditHost"] ?? "reignite-optimizely-lab.azurewebsites.net";
         var primaryHttps = !primaryHost.StartsWith("localhost", StringComparison.OrdinalIgnoreCase);
 
-        var desired = new List<HostDefinition>
+        var hosts = new List<ApplicationHost>
         {
-            new() { Name = primaryHost, Type = HostDefinitionType.Primary, UseSecureConnection = primaryHttps }
+            new(primaryHost)
+            {
+                Type = ApplicationHostType.Primary,
+                PreferredUrlScheme = primaryHttps ? UrlScheme.Https : UrlScheme.Http
+            }
         };
+
         if (!string.Equals(editHost, primaryHost, StringComparison.OrdinalIgnoreCase))
         {
-            desired.Add(new() { Name = editHost, Type = HostDefinitionType.Edit });
+            hosts.Add(new ApplicationHost(editHost) { Type = ApplicationHostType.Edit });
         }
 
-        var same = site.SiteUrl == siteUrl &&
-                   site.Hosts.Count == desired.Count &&
-                   desired.All(d => site.Hosts.Any(h =>
-                       string.Equals(h.Name, d.Name, StringComparison.OrdinalIgnoreCase) &&
-                       h.Type == d.Type &&
-                       h.UseSecureConnection == d.UseSecureConnection));
-        if (same)
-        {
-            return;
-        }
-
-        site.SiteUrl = siteUrl;
-        site.Hosts.Clear();
-        foreach (var host in desired)
-        {
-            site.Hosts.Add(host);
-        }
+        return hosts;
     }
+
+    private static bool HostsMatch(IList<ApplicationHost> existing, IList<ApplicationHost> desired) =>
+        existing.Count == desired.Count &&
+        desired.All(d => existing.Any(h =>
+            string.Equals(h.Authority, d.Authority, StringComparison.OrdinalIgnoreCase) &&
+            h.Type == d.Type));
 
     private static ContentReference EnsureRootFolder(IContentRepository repository)
     {
@@ -161,7 +169,7 @@ public class SiteSeedModule : IInitializableModule
         start.Name = "Home";
         start.Heading = "Optimizely Performance Engineering";
         start.MainBody = new XhtmlString(
-            "<p>This is a live Optimizely CMS 12 site running on .NET 8. " +
+            "<p>This is a live Optimizely CMS 13 site running on .NET 10. " +
             "It is the front door for the Reignite diagnostics test bed.</p>" +
             "<p>Open the <a href=\"/diagnostics-lab\">Diagnostics Lab</a> to trigger faults on purpose.</p>");
         return repository.Save(start, SaveAction.Publish, AccessLevel.NoAccess);

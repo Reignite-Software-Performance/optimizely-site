@@ -7,6 +7,7 @@ using EPiServer.Framework.Initialization;
 using EPiServer.Security;
 using EPiServer.ServiceLocation;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using OptimizelySite.Models.Pages;
 
 namespace OptimizelySite.Infrastructure;
@@ -19,7 +20,7 @@ namespace OptimizelySite.Infrastructure;
 /// </summary>
 /// <remarks>
 /// CMS 13 replaced the old <c>ISiteDefinitionRepository</c> surface with the
-/// application model. A routable site is an <see cref="Website"/>, saved through
+/// application model. A routable site is an <see cref="InProcessWebsite"/>, saved through
 /// <see cref="IApplicationRepository"/>; the seed root is the site's content
 /// folder and the entry point is the start page.
 /// </remarks>
@@ -27,7 +28,7 @@ namespace OptimizelySite.Infrastructure;
 [ModuleDependency(typeof(EPiServer.Web.InitializationModule))]
 public class SiteSeedModule : IInitializableModule
 {
-    private const string ApplicationName = "optimizely-site";
+    private const string ApplicationName = "OptimizelySite";
     private const string SiteDisplayName = "Optimizely Site";
     private const string RootFolderName = "Sites";
 
@@ -51,6 +52,7 @@ public class SiteSeedModule : IInitializableModule
             var contentRepository = context.Locate.Advanced.GetInstance<IContentRepository>();
             var applicationRepository = context.Locate.Advanced.GetInstance<IApplicationRepository>();
             var configuration = context.Locate.Advanced.GetInstance<IConfiguration>();
+            var logger = context.Locate.Advanced.GetInstance<ILogger<SiteSeedModule>>();
 
             // Optimizely expects a content-root folder under the system root; a start
             // page placed directly under the system root does not resolve.
@@ -73,11 +75,12 @@ public class SiteSeedModule : IInitializableModule
                 // Production and the lab share this database: the existing row carries
                 // the live host bindings. This seed runs unattended at startup, so it
                 // must NEVER re-point or rewrite an existing application. Create only.
+                logger.LogInformation("Site seed skipped: an application matching '{ApplicationName}' ({DisplayName}) already exists; existing bindings are left untouched.", ApplicationName, SiteDisplayName);
                 _seeded = true;
                 return;
             }
 
-            var website = new Website(ApplicationName, folderLink)
+            var website = new InProcessWebsite(ApplicationName, folderLink)
             {
                 DisplayName = SiteDisplayName,
                 EntryPoint = startLink
@@ -94,6 +97,7 @@ public class SiteSeedModule : IInitializableModule
             applicationRepository.MakeDefaultAsync(website, true, CancellationToken.None)
                 .GetAwaiter().GetResult();
 
+            logger.LogInformation("Site seed created the CMS application '{ApplicationName}' and its content.", ApplicationName);
             _seeded = true;
         }
     }

@@ -21,8 +21,16 @@ surface them.
 **empty** database, and is deliberately **create-only**: if an application for this lab
 already exists it is left untouched. Production and the lab share the same database, and
 the seed runs unattended at startup, so it must never re-point an existing application's
-hosts or entry point. The create path has not yet been exercised against a genuinely empty
-database — the CMS 12 → 13 migration created the current application row.
+hosts or entry point. The seed creates the application as an `InProcessWebsite` (a routable site —
+`Website` is headless and rejects `Edit` hosts) with an identifier-shaped
+`Name` (`OptimizelySite`; spaces and hyphens are rejected) and a human
+`DisplayName`. The create path was proven against the isolated
+`optimizely-lab-v13` database: application `OptimizelySite`, default, entry
+point set, hosts `localhost:8123` (Primary) and the App Service host (Edit).
+
+The isolated `optimizely-lab-v13` database is now the lab's CMS 13 target. The shared
+`optimizely-lab` database was forward-migrated by an earlier CMS 13 run and remains the
+CMS 12 app's database; the lab no longer points at it.
 
 ## Run locally
 

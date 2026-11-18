@@ -21,6 +21,9 @@ namespace OptimizelySite.Infrastructure;
 [ModuleDependency(typeof(EPiServer.Web.InitializationModule))]
 public class SiteSeedModule : IInitializableModule
 {
+    private const string SiteName = "Optimizely Site";
+    private const string RootFolderName = "Sites";
+
     private static readonly object Gate = new();
     private static bool _seeded;
 
@@ -39,54 +42,84 @@ public class SiteSeedModule : IInitializableModule
             }
 
             var contentRepository = context.Locate.Advanced.GetInstance<IContentRepository>();
+            var contentLoader = context.Locate.Advanced.GetInstance<IContentLoader>();
             var siteRepository = context.Locate.Advanced.GetInstance<ISiteDefinitionRepository>();
             var configuration = context.Locate.Advanced.GetInstance<IConfiguration>();
 
-            var startLink = EnsureStartPage(contentRepository);
+            // Optimizely expects a content-root folder under the system root; a start
+            // page placed directly under the system root does not resolve.
+            var folderLink = EnsureRootFolder(contentRepository);
+            var site = siteRepository.List().FirstOrDefault(candidate => candidate.Name == SiteName);
+
+            if (site is not null)
+            {
+                var writable = site.CreateWritableClone();
+                var start = contentLoader.Get<PageData>(writable.StartPage);
+                if (start is not null && start.ParentLink == ContentReference.RootPage)
+                {
+                    contentRepository.Move(writable.StartPage, folderLink, AccessLevel.NoAccess, AccessLevel.NoAccess);
+                    siteRepository.Save(writable);
+                }
+
+                _seeded = true;
+                return;
+            }
+
+            var startLink = EnsureStartPage(contentRepository, folderLink);
             EnsureStandardPage(contentRepository, startLink, "About", "About this site",
                 "An Optimizely CMS 12 site instrumented for performance diagnostics.");
             EnsureStandardPage(contentRepository, startLink, "Contact", "Contact",
                 "Reach the Reignite diagnostics team.");
             EnsureLabPage(contentRepository, startLink);
 
-            if (!siteRepository.List().Any(site => site.Name == "Optimizely Site"))
+            // A site definition allows exactly one Edit host. Default it to the App
+            // Service hostname; override with Site:EditHost for local runs.
+            var editHost = configuration["Site:EditHost"];
+            if (string.IsNullOrWhiteSpace(editHost))
             {
-                // A site definition allows exactly one Edit host. Default it to the
-                // App Service hostname; override with Site:EditHost for local runs.
-                var editHost = configuration["Site:EditHost"];
-                if (string.IsNullOrWhiteSpace(editHost))
-                {
-                    editHost = "reignite-optimizely-lab.azurewebsites.net";
-                }
-
-                var site = new SiteDefinition
-                {
-                    Name = "Optimizely Site",
-                    SiteUrl = new Uri("https://optimizely.reigniteperformance.com/"),
-                    StartPage = startLink,
-                    Hosts = new List<HostDefinition>
-                    {
-                        new() { Name = "optimizely.reigniteperformance.com", Type = HostDefinitionType.Primary, UseSecureConnection = true },
-                        new() { Name = editHost, Type = HostDefinitionType.Edit }
-                    }
-                };
-                siteRepository.Save(site);
+                editHost = "reignite-optimizely-lab.azurewebsites.net";
             }
 
+            var newSite = new SiteDefinition
+            {
+                Name = SiteName,
+                SiteUrl = new Uri("https://optimizely.reigniteperformance.com/"),
+                StartPage = startLink,
+                Hosts = new List<HostDefinition>
+                {
+                    new() { Name = "optimizely.reigniteperformance.com", Type = HostDefinitionType.Primary, UseSecureConnection = true },
+                    new() { Name = editHost, Type = HostDefinitionType.Edit }
+                }
+            };
+            siteRepository.Save(newSite);
             _seeded = true;
         }
     }
 
-    private static ContentReference EnsureStartPage(IContentRepository repository)
+    private static ContentReference EnsureRootFolder(IContentRepository repository)
     {
-        var existing = repository.GetChildren<StartPage>(ContentReference.RootPage)
+        var existing = repository.GetChildren<ContentFolder>(ContentReference.RootPage)
+            .FirstOrDefault(folder => folder.Name == RootFolderName);
+        if (existing is not null)
+        {
+            return existing.ContentLink;
+        }
+
+        var folder = repository.GetDefault<ContentFolder>(ContentReference.RootPage);
+        folder.Name = RootFolderName;
+        return repository.Save(folder, SaveAction.Publish, AccessLevel.NoAccess);
+    }
+
+    private static ContentReference EnsureStartPage(IContentRepository repository, ContentReference parent)
+    {
+        var existing = repository.GetChildren<StartPage>(parent)
             .FirstOrDefault(page => page.Name == "Home");
         if (existing is not null)
         {
             return existing.ContentLink;
         }
 
-        var start = repository.GetDefault<StartPage>(ContentReference.RootPage);
+        var start = repository.GetDefault<StartPage>(parent);
         start.Name = "Home";
         start.Heading = "Optimizely Performance Engineering";
         start.MainBody = new XhtmlString(

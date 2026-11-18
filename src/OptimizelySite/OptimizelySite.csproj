@@ -1,12 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="EPiServer.CMS" Version="12.35.0" />
+    <!-- Optimizely V13 (CMS 13) is the .NET 10 release: CMS 12 ships net6.0 assets only,
+         so a net10.0 target requires the major upgrade, not just a TFM edit.
+         13.7.0 is the current CMS 13 release, not the 13.0.0 floor. -->
+    <PackageReference Include="EPiServer.CMS" Version="13.7.0" />
+    <!-- Separate from the CMS meta-package in V13 (it was bundled in 12.x): this is where
+         AddCmsAspNetIdentity lives. -->
+    <PackageReference Include="EPiServer.Cms.UI.AspNetIdentity" Version="13.7.0" />
     <PackageReference Include="Reignite.Profiler.AspNetCore" Version="1.0.0" />
     <!-- Carries Reignite.Client 1.1.x, which the profiler's AddProfiler resolves at runtime. -->
     <PackageReference Include="Reignite.Client.Web" Version="1.1.5" />

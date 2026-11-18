@@ -1,4 +1,5 @@
 ﻿using EPiServer.Cms.UI.AspNetIdentity;
+using EPiServer.DependencyInjection;
 using EPiServer.Web.Routing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;

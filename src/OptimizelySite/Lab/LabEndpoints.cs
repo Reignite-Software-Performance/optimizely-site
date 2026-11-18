@@ -7,6 +7,7 @@ using EPiServer.Core;
 using EPiServer.Framework.Cache;
 using EPiServer.Web.Routing;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -166,11 +167,18 @@ public static class LabEndpoints
                 $"Walked {levels} levels and loaded {total} pages (uncached) in {watch.ElapsedMilliseconds} ms."));
         });
 
-        endpoints.MapGet("/lab/content-cache", (HttpContext ctx, IOptions<LabOptions> options, ISynchronizedObjectInstanceCache cache, IContentLoader loader) =>
+        endpoints.MapGet("/lab/content-cache", (HttpContext ctx, IOptions<LabOptions> options, ISynchronizedObjectInstanceCache cache, IMemoryCache memoryCache, IContentLoader loader) =>
         {
             var o = options.Value;
             if (!Allowed(ctx, o)) return Results.NotFound();
-            cache.Clear();
+            // CMS 13 removed IObjectInstanceCache.Clear() (it was obsolete in CMS 12 and is gone
+            // in 13), and ISynchronizedObjectInstanceCache only ever exposed per-key RemoveLocal
+            // and RemoveRemote - there is no bulk clear left in the public surface. Compact() on
+            // the Microsoft IMemoryCache underneath is the supported way to empty the layer
+            // Optimizely's object cache is built on, which is what this fault scenario needs.
+            // Compact lives on the concrete MemoryCache, not IMemoryCache, so the cast is
+            // required - the registered implementation is MemoryCache.
+            if (memoryCache is MemoryCache concreteCache) concreteCache.Compact(1.0);
             var watch = Stopwatch.StartNew();
             var count = loader.GetChildren<PageData>(ContentReference.StartPage).Count();
             watch.Stop();

@@ -68,41 +68,31 @@ public class SiteSeedModule : IInitializableModule
                     string.Equals(candidate.Name, ApplicationName, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(candidate.DisplayName, SiteDisplayName, StringComparison.OrdinalIgnoreCase));
 
-            if (existing is null)
+            if (existing is not null)
             {
-                var website = new Website(ApplicationName, folderLink)
-                {
-                    DisplayName = SiteDisplayName,
-                    EntryPoint = startLink
-                };
-                foreach (var host in hosts)
-                {
-                    website.Hosts.Add(host);
-                }
-
-                applicationRepository.SaveAsync(website, CancellationToken.None)
-                    .GetAwaiter().GetResult();
-                applicationRepository.EnableAssetsAsync(website, true, CancellationToken.None)
-                    .GetAwaiter().GetResult();
-                applicationRepository.MakeDefaultAsync(website, true, CancellationToken.None)
-                    .GetAwaiter().GetResult();
+                // Production and the lab share this database: the existing row carries
+                // the live host bindings. This seed runs unattended at startup, so it
+                // must NEVER re-point or rewrite an existing application. Create only.
+                _seeded = true;
+                return;
             }
-            else if (existing is Website website)
+
+            var website = new Website(ApplicationName, folderLink)
             {
-                var changed = website.EntryPoint != startLink || !HostsMatch(website.Hosts, hosts);
-                if (changed)
-                {
-                    website.EntryPoint = startLink;
-                    website.Hosts.Clear();
-                    foreach (var host in hosts)
-                    {
-                        website.Hosts.Add(host);
-                    }
-
-                    applicationRepository.SaveAsync(website, CancellationToken.None)
-                        .GetAwaiter().GetResult();
-                }
+                DisplayName = SiteDisplayName,
+                EntryPoint = startLink
+            };
+            foreach (var host in hosts)
+            {
+                website.Hosts.Add(host);
             }
+
+            applicationRepository.SaveAsync(website, CancellationToken.None)
+                .GetAwaiter().GetResult();
+            applicationRepository.EnableAssetsAsync(website, true, CancellationToken.None)
+                .GetAwaiter().GetResult();
+            applicationRepository.MakeDefaultAsync(website, true, CancellationToken.None)
+                .GetAwaiter().GetResult();
 
             _seeded = true;
         }
@@ -135,12 +125,6 @@ public class SiteSeedModule : IInitializableModule
 
         return hosts;
     }
-
-    private static bool HostsMatch(IList<ApplicationHost> existing, IList<ApplicationHost> desired) =>
-        existing.Count == desired.Count &&
-        desired.All(d => existing.Any(h =>
-            string.Equals(h.Authority, d.Authority, StringComparison.OrdinalIgnoreCase) &&
-            h.Type == d.Type));
 
     private static ContentReference EnsureRootFolder(IContentRepository repository)
     {

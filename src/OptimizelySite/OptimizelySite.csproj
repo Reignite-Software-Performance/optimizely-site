@@ -10,6 +10,7 @@
     <PackageReference Include="Reignite.Profiler.AspNetCore" Version="1.0.0" />
     <!-- Carries Reignite.Client 1.1.x, which the profiler's AddProfiler resolves at runtime. -->
     <PackageReference Include="Reignite.Client.Web" Version="1.1.5" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
 

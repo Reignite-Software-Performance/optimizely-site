@@ -30,6 +30,18 @@ public sealed class LabOptions
     /// <summary>Upper bound for blocked thread-pool workers.</summary>
     public int MaxThreads { get; set; } = 64;
 
+    /// <summary>Upper bound for the number of content reads in a content storm.</summary>
+    public int MaxContentReads { get; set; } = 20_000;
+
+    /// <summary>Upper bound for messages pushed in a Service Bus storm.</summary>
+    public int MaxServiceBusMessages { get; set; } = 500;
+
+    /// <summary>Azure Service Bus connection string (server-side only). Empty disables the storm.</summary>
+    public string? ServiceBusConnection { get; set; }
+
+    /// <summary>Queue or topic that receives the storm.</summary>
+    public string? ServiceBusQueue { get; set; }
+
     /// <summary>True only when the lab is switched on AND has a key to compare against.</summary>
     public bool IsUsable => Enabled && !string.IsNullOrWhiteSpace(Key);
 }

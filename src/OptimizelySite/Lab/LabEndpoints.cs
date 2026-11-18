@@ -1,6 +1,13 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using Azure.Messaging.ServiceBus;
+using EPiServer;
+using EPiServer.Core;
+using EPiServer.Framework.Cache;
+using EPiServer.Web.Routing;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace OptimizelySite.Lab;
@@ -108,6 +115,129 @@ public static class LabEndpoints
             command.CommandTimeout = (delay / 1000) + 30;
             await command.ExecuteScalarAsync(ctx.RequestAborted);
             return Html(Page("Slow SQL", $"Ran WAITFOR DELAY for {delay} ms against the EPiServerDB connection."));
+        });
+
+        // ---- Optimizely-specific faults -------------------------------------------------
+
+        endpoints.MapGet("/lab/content-storm", (HttpContext ctx, IOptions<LabOptions> options, IContentRepository repository, int? count) =>
+        {
+            var o = options.Value;
+            if (!Allowed(ctx, o)) return Results.NotFound();
+            var reads = Math.Clamp(count ?? 2_000, 1, o.MaxContentReads);
+            var start = ContentReference.StartPage;
+            var watch = Stopwatch.StartNew();
+            var rows = 0;
+            for (var i = 0; i < reads; i++)
+            {
+                foreach (var child in repository.GetChildren<PageData>(start))
+                {
+                    _ = child.PageLink;
+                    rows++;
+                }
+            }
+            watch.Stop();
+            return Html(Page("Content retrieval storm",
+                $"Issued {reads} uncached GetChildren calls ({rows} rows) against the CMS database in {watch.ElapsedMilliseconds} ms."));
+        });
+
+        endpoints.MapGet("/lab/content-tree", (HttpContext ctx, IOptions<LabOptions> options, IContentRepository repository, int? depth) =>
+        {
+            var o = options.Value;
+            if (!Allowed(ctx, o)) return Results.NotFound();
+            var levels = Math.Clamp(depth ?? 50, 1, 200);
+            var watch = Stopwatch.StartNew();
+            var total = 0;
+            var current = new List<ContentReference> { ContentReference.StartPage };
+            for (var level = 0; level < levels && current.Count > 0; level++)
+            {
+                var next = new List<ContentReference>();
+                foreach (var parent in current)
+                {
+                    foreach (var child in repository.GetChildren<PageData>(parent))
+                    {
+                        next.Add(child.ContentLink);
+                        total++;
+                    }
+                }
+                current = next;
+            }
+            watch.Stop();
+            return Html(Page("Content tree traversal",
+                $"Walked {levels} levels and loaded {total} pages (uncached) in {watch.ElapsedMilliseconds} ms."));
+        });
+
+        endpoints.MapGet("/lab/content-cache", (HttpContext ctx, IOptions<LabOptions> options, ISynchronizedObjectInstanceCache cache, IContentLoader loader) =>
+        {
+            var o = options.Value;
+            if (!Allowed(ctx, o)) return Results.NotFound();
+            cache.Clear();
+            var watch = Stopwatch.StartNew();
+            var count = loader.GetChildren<PageData>(ContentReference.StartPage).Count();
+            watch.Stop();
+            return Html(Page("Content cache stampede",
+                $"Cleared the CMS cache and re-read {count} children in {watch.ElapsedMilliseconds} ms."));
+        });
+
+        endpoints.MapGet("/lab/url-storm", (HttpContext ctx, IOptions<LabOptions> options, IContentRepository repository, UrlResolver urlResolver, int? count) =>
+        {
+            var o = options.Value;
+            if (!Allowed(ctx, o)) return Results.NotFound();
+            var reads = Math.Clamp(count ?? 500, 1, o.MaxContentReads);
+            var watch = Stopwatch.StartNew();
+            var pages = new List<PageData>();
+            var stack = new Stack<ContentReference>();
+            stack.Push(ContentReference.StartPage);
+            while (stack.Count > 0 && pages.Count < reads)
+            {
+                var parent = stack.Pop();
+                foreach (var child in repository.GetChildren<PageData>(parent))
+                {
+                    pages.Add(child);
+                    stack.Push(child.ContentLink);
+                    if (pages.Count >= reads)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            var resolved = 0;
+            foreach (var page in pages)
+            {
+                _ = urlResolver.GetUrl(page.ContentLink);
+                resolved++;
+            }
+            watch.Stop();
+            return Html(Page("URL routing storm",
+                $"Resolved {resolved} content URLs in {watch.ElapsedMilliseconds} ms."));
+        });
+
+        endpoints.MapGet("/lab/service-bus", async (HttpContext ctx, IOptions<LabOptions> options, int? count) =>
+        {
+            var o = options.Value;
+            if (!Allowed(ctx, o)) return Results.NotFound();
+            if (string.IsNullOrWhiteSpace(o.ServiceBusConnection) || string.IsNullOrWhiteSpace(o.ServiceBusQueue))
+            {
+                return Results.Json(
+                    new { error = "Service Bus is not configured (Lab:ServiceBusConnection / Lab:ServiceBusQueue)." },
+                    statusCode: 503);
+            }
+
+            var messages = Math.Clamp(count ?? 100, 1, o.MaxServiceBusMessages);
+            var watch = Stopwatch.StartNew();
+            await using var client = new ServiceBusClient(o.ServiceBusConnection);
+            await using var sender = client.CreateSender(o.ServiceBusQueue);
+            for (var i = 0; i < messages; i++)
+            {
+                await sender.SendMessageAsync(new ServiceBusMessage(
+                    $"optimizely-lab storm {DateTime.UtcNow:O} #{i}")
+                {
+                    ContentType = "text/plain"
+                }, ctx.RequestAborted);
+            }
+            watch.Stop();
+            return Html(Page("Service Bus storm",
+                $"Published {messages} messages to '{o.ServiceBusQueue}' in {watch.ElapsedMilliseconds} ms."));
         });
 
         return endpoints;

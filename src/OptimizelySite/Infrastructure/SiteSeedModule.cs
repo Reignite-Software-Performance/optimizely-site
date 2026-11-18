@@ -1,0 +1,138 @@
+using EPiServer;
+using EPiServer.Core;
+using EPiServer.DataAccess;
+using EPiServer.Framework;
+using EPiServer.Framework.Initialization;
+using EPiServer.Security;
+using EPiServer.ServiceLocation;
+using EPiServer.Web;
+using Microsoft.Extensions.Configuration;
+using OptimizelySite.Models.Pages;
+
+namespace OptimizelySite.Infrastructure;
+
+/// <summary>
+/// Creates the site definition and a small content tree the first time the app
+/// starts against an empty database, so the host serves an actual Optimizely
+/// site instead of a 404. Idempotent: existing content and an existing site
+/// definition are reused.
+/// </summary>
+[InitializableModule]
+[ModuleDependency(typeof(EPiServer.Web.InitializationModule))]
+public class SiteSeedModule : IInitializableModule
+{
+    private static readonly object Gate = new();
+    private static bool _seeded;
+
+    public void Initialize(InitializationEngine context)
+    {
+        if (_seeded)
+        {
+            return;
+        }
+
+        lock (Gate)
+        {
+            if (_seeded)
+            {
+                return;
+            }
+
+            var contentRepository = context.Locate.Advanced.GetInstance<IContentRepository>();
+            var siteRepository = context.Locate.Advanced.GetInstance<ISiteDefinitionRepository>();
+            var configuration = context.Locate.Advanced.GetInstance<IConfiguration>();
+
+            var startLink = EnsureStartPage(contentRepository);
+            EnsureStandardPage(contentRepository, startLink, "About", "About this site",
+                "An Optimizely CMS 12 site instrumented for performance diagnostics.");
+            EnsureStandardPage(contentRepository, startLink, "Contact", "Contact",
+                "Reach the Reignite diagnostics team.");
+            EnsureLabPage(contentRepository, startLink);
+
+            if (!siteRepository.List().Any(site => site.Name == "Optimizely Site"))
+            {
+                // A site definition allows exactly one Edit host. Default it to the
+                // App Service hostname; override with Site:EditHost for local runs.
+                var editHost = configuration["Site:EditHost"];
+                if (string.IsNullOrWhiteSpace(editHost))
+                {
+                    editHost = "reignite-optimizely-lab.azurewebsites.net";
+                }
+
+                var site = new SiteDefinition
+                {
+                    Name = "Optimizely Site",
+                    SiteUrl = new Uri("https://optimizely.reigniteperformance.com/"),
+                    StartPage = startLink,
+                    Hosts = new List<HostDefinition>
+                    {
+                        new() { Name = "optimizely.reigniteperformance.com", Type = HostDefinitionType.Primary, UseSecureConnection = true },
+                        new() { Name = editHost, Type = HostDefinitionType.Edit }
+                    }
+                };
+                siteRepository.Save(site);
+            }
+
+            _seeded = true;
+        }
+    }
+
+    private static ContentReference EnsureStartPage(IContentRepository repository)
+    {
+        var existing = repository.GetChildren<StartPage>(ContentReference.RootPage)
+            .FirstOrDefault(page => page.Name == "Home");
+        if (existing is not null)
+        {
+            return existing.ContentLink;
+        }
+
+        var start = repository.GetDefault<StartPage>(ContentReference.RootPage);
+        start.Name = "Home";
+        start.Heading = "Optimizely Performance Engineering";
+        start.MainBody = new XhtmlString(
+            "<p>This is a live Optimizely CMS 12 site running on .NET 8. " +
+            "It is the front door for the Reignite diagnostics test bed.</p>" +
+            "<p>Open the <a href=\"/diagnostics-lab\">Diagnostics Lab</a> to trigger faults on purpose.</p>");
+        return repository.Save(start, SaveAction.Publish, AccessLevel.NoAccess);
+    }
+
+    private static void EnsureStandardPage(
+        IContentRepository repository,
+        ContentReference parent,
+        string name,
+        string heading,
+        string body)
+    {
+        if (repository.GetChildren<StandardPage>(parent).Any(page => page.Name == name))
+        {
+            return;
+        }
+
+        var page = repository.GetDefault<StandardPage>(parent);
+        page.Name = name;
+        page.Heading = heading;
+        page.Introduction = body;
+        page.MainBody = new XhtmlString($"<p>{body}</p>");
+        repository.Save(page, SaveAction.Publish, AccessLevel.NoAccess);
+    }
+
+    private static void EnsureLabPage(IContentRepository repository, ContentReference parent)
+    {
+        if (repository.GetChildren<LabPage>(parent).Any(page => page.Name == "Diagnostics Lab"))
+        {
+            return;
+        }
+
+        var labPage = repository.GetDefault<LabPage>(parent);
+        labPage.Name = "Diagnostics Lab";
+        labPage.Heading = "Diagnostics Lab";
+        labPage.Introduction = new XhtmlString(
+            "<p>Trigger deliberate faults on this live Optimizely site. Enter the operator key, " +
+            "run a fault, then watch the result in the Reignite diagnostics bot.</p>");
+        repository.Save(labPage, SaveAction.Publish, AccessLevel.NoAccess);
+    }
+
+    public void Uninitialize(InitializationEngine context)
+    {
+    }
+}

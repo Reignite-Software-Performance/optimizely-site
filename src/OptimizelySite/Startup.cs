@@ -62,6 +62,7 @@ namespace OptimizelySite
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapControllers();
                 endpoints.MapContent();
                 endpoints.MapLabEndpoints();
             });

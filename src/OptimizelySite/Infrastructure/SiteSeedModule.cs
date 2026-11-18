@@ -58,9 +58,10 @@ public class SiteSeedModule : IInitializableModule
                 if (start is not null && start.ParentLink == ContentReference.RootPage)
                 {
                     contentRepository.Move(writable.StartPage, folderLink, AccessLevel.NoAccess, AccessLevel.NoAccess);
-                    siteRepository.Save(writable);
                 }
 
+                ApplyHosts(configuration, writable);
+                siteRepository.Save(writable);
                 _seeded = true;
                 return;
             }
@@ -72,27 +73,54 @@ public class SiteSeedModule : IInitializableModule
                 "Reach the Reignite diagnostics team.");
             EnsureLabPage(contentRepository, startLink);
 
-            // A site definition allows exactly one Edit host. Default it to the App
-            // Service hostname; override with Site:EditHost for local runs.
-            var editHost = configuration["Site:EditHost"];
-            if (string.IsNullOrWhiteSpace(editHost))
-            {
-                editHost = "reignite-optimizely-lab.azurewebsites.net";
-            }
-
             var newSite = new SiteDefinition
             {
                 Name = SiteName,
-                SiteUrl = new Uri("https://optimizely.reigniteperformance.com/"),
-                StartPage = startLink,
-                Hosts = new List<HostDefinition>
-                {
-                    new() { Name = "optimizely.reigniteperformance.com", Type = HostDefinitionType.Primary, UseSecureConnection = true },
-                    new() { Name = editHost, Type = HostDefinitionType.Edit }
-                }
+                StartPage = startLink
             };
+            ApplyHosts(configuration, newSite);
             siteRepository.Save(newSite);
             _seeded = true;
+        }
+    }
+
+    /// <summary>
+    /// Applies the host bindings from configuration. Defaults target the public
+    /// custom domain; a local run sets Site:PrimaryHost/Site:SiteUrl so the same
+    /// site definition serves localhost without a license.
+    /// </summary>
+    private static void ApplyHosts(IConfiguration configuration, SiteDefinition site)
+    {
+        var siteUrl = new Uri(configuration["Site:SiteUrl"] ?? "https://optimizely.reigniteperformance.com/");
+        var primaryHost = configuration["Site:PrimaryHost"] ?? "optimizely.reigniteperformance.com";
+        var editHost = configuration["Site:EditHost"] ?? "reignite-optimizely-lab.azurewebsites.net";
+        var primaryHttps = !primaryHost.StartsWith("localhost", StringComparison.OrdinalIgnoreCase);
+
+        var desired = new List<HostDefinition>
+        {
+            new() { Name = primaryHost, Type = HostDefinitionType.Primary, UseSecureConnection = primaryHttps }
+        };
+        if (!string.Equals(editHost, primaryHost, StringComparison.OrdinalIgnoreCase))
+        {
+            desired.Add(new() { Name = editHost, Type = HostDefinitionType.Edit });
+        }
+
+        var same = site.SiteUrl == siteUrl &&
+                   site.Hosts.Count == desired.Count &&
+                   desired.All(d => site.Hosts.Any(h =>
+                       string.Equals(h.Name, d.Name, StringComparison.OrdinalIgnoreCase) &&
+                       h.Type == d.Type &&
+                       h.UseSecureConnection == d.UseSecureConnection));
+        if (same)
+        {
+            return;
+        }
+
+        site.SiteUrl = siteUrl;
+        site.Hosts.Clear();
+        foreach (var host in desired)
+        {
+            site.Hosts.Add(host);
         }
     }
 

@@ -19,7 +19,8 @@
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
     <!-- Reignite counters: CMS/Commerce instrumentation (pulls Core and DotNetCounters
          transitively). No configuration is required; every counter has a default. -->
-    <PackageReference Include="Reignite.Optimizely.Counters.CMS" Version="1.0.0" />
+    <!-- Temporarily disabled: CMSPerformanceCountersModule throws "no service registered for EPiServer.IContentLoader" in ConfigureContainer on CMS 13. Reported to automaton-15. -->
+    <!-- <PackageReference Include="Reignite.Optimizely.Counters.CMS" Version="1.0.0" /> -->
     <Folder Include="wwwroot\" />
   </ItemGroup>
 

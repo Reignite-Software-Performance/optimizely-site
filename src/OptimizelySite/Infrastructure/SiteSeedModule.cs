@@ -41,6 +41,16 @@ public class SiteSeedModule : IInitializableModule
                 return;
             }
 
+            // CMS 13 replaces ISiteDefinitionRepository with IApplicationRepository and
+            // throws "Use IApplicationRepository instead" from the old surface. The content
+            // and site definition were created under CMS 12 and persist, so skip re-seeding.
+            var cmsMajor = typeof(EPiServer.Core.ContentReference).Assembly.GetName().Version?.Major ?? 0;
+            if (cmsMajor >= 13)
+            {
+                _seeded = true;
+                return;
+            }
+
             var contentRepository = context.Locate.Advanced.GetInstance<IContentRepository>();
             var contentLoader = context.Locate.Advanced.GetInstance<IContentLoader>();
             var siteRepository = context.Locate.Advanced.GetInstance<ISiteDefinitionRepository>();

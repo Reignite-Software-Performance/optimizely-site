@@ -1,40 +1,79 @@
 @model OptimizelySite.Models.Pages.StandardPage
 @{
-    Layout = null;
+    Layout = "_Layout";
+    ViewData["Title"] = Model.Heading;
+    var isContact = Model.Heading?.Contains("Contact", StringComparison.OrdinalIgnoreCase) == true;
+    var contactHref = "mailto:diagnostics@reigniteperformance.com?subject=Optimizely%20performance%20diagnostics";
 }
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@Model.Heading · Optimizely</title>
-    <style>
-        body { font: 16px/1.6 system-ui, sans-serif; margin: 0; color: #111827; background: #f8fafc; }
-        header { background: #0f172a; color: #e5e7eb; padding: 1rem 2rem; }
-        nav a { color: #e5e7eb; margin-right: 1.25rem; text-decoration: none; font-weight: 600; }
-        nav a:hover { text-decoration: underline; }
-        main { max-width: 52rem; margin: 3rem auto; padding: 0 1.5rem; }
-        h1 { font-size: 2.25rem; line-height: 1.15; }
-        .lead { font-size: 1.15rem; color: #4b5563; }
-        a { color: #1d4ed8; }
-    </style>
-</head>
-<body>
-    <header>
-        <nav>
-            <a href="/">Home</a>
-            <a href="/about">About</a>
-            <a href="/contact">Contact</a>
-            <a href="/diagnostics-lab">Diagnostics Lab</a>
-        </nav>
-    </header>
-    <main>
+<section class="page-hero">
+    <div class="container">
+        <span class="eyebrow"><span class="spark"></span>Reignite × Optimizely</span>
         <h1>@Model.Heading</h1>
         @if (!string.IsNullOrWhiteSpace(Model.Introduction))
         {
-            <p class="lead">@Model.Introduction</p>
+            <p>@Model.Introduction</p>
         }
+    </div>
+</section>
+
+<section class="page-body container">
+    <div class="prose">
         @Html.Raw(Model.MainBody?.ToHtmlString() ?? string.Empty)
-    </main>
-</body>
-</html>
+
+        @if (isContact)
+        {
+            <h2>Start a conversation</h2>
+            <p>Tell us which Optimizely experience you want to make faster. We’ll reply with a short plan for a first capture — no procurement gauntlet.</p>
+            <div class="features" style="grid-template-columns: 1fr 1fr; margin-top: 24px;">
+                <article class="card">
+                    <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div>
+                    <h3>Email</h3>
+                    <p><a href="@contactHref">diagnostics@reigniteperformance.com</a></p>
+                </article>
+                <article class="card">
+                    <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+                    <h3>Where we work</h3>
+                    <p>Charleston, South Carolina — and inside your production environment.</p>
+                </article>
+            </div>
+            <h2>What to expect</h2>
+            <ul>
+                <li>A 30-minute technical call, not a sales deck.</li>
+                <li>A scoped first capture on one environment, in production or staging.</li>
+                <li>A written diagnosis with evidence and a suggested fix.</li>
+            </ul>
+        }
+        else
+        {
+            <h2>Why this site exists</h2>
+            <p>This is a live Optimizely CMS 12 site built as the front door to the Reignite diagnostics test bed. It renders the kind of content, commerce, personalization, and integration paths we profile in customer environments — and it can deliberately manifest the performance problems we fix.</p>
+
+            <h2>What we test here</h2>
+            <ul>
+                <li><strong>The profiler</strong> — automatic trace and dump capture when runtime thresholds cross.</li>
+                <li><strong>The diagnostics control plane</strong> — scoped, server-side reads of agents, resolutions, metric alerts, and profiler snapshots.</li>
+                <li><strong>The Teams diagnostics bot</strong> — adaptive cards in Teams and anonymous Web Chat, scoped to one customer at a time.</li>
+            </ul>
+
+            <h2>How it’s wired</h2>
+            <p>Optimizely CMS 12.35 on .NET 8, Azure SQL, hosted on Azure App Service. Diagnostics reach the site through a key-gated fault lab; the bot reads the control plane through a server-side relay, so no credential or cross-customer data ever reaches the browser.</p>
+
+            <h2>What “good” looks like</h2>
+            <p>A page that renders in milliseconds, a catalog query that stays flat under load, and an incident that arrives with its own trace attached. That is the loop Reignite is built to close.</p>
+        }
+    </div>
+
+    <aside>
+        <div class="aside-card">
+            <h3>At a glance</h3>
+            <dl>
+                <div><dt>Platform</dt><dd>Optimizely CMS 12.35</dd></div>
+                <div><dt>Runtime</dt><dd>.NET 8 on Azure App Service</dd></div>
+                <div><dt>Data</dt><dd>Azure SQL</dd></div>
+                <div><dt>Diagnostics</dt><dd>Reignite profiler + control plane</dd></div>
+                <div><dt>Chat surface</dt><dd>Teams and anonymous Web Chat</dd></div>
+            </dl>
+            <a class="btn btn--primary" href="@contactHref">Start a conversation</a>
+        </div>
+    </aside>
+</section>

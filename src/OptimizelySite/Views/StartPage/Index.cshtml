@@ -1,35 +1,198 @@
 @model OptimizelySite.Models.Pages.StartPage
 @{
-    Layout = null;
+    Layout = "_Layout";
+    ViewData["Title"] = "Performance engineering for Optimizely";
+    var requestPath = Context.Request.Path.Value ?? string.Empty;
+    var isPreview = requestPath.StartsWith("/preview", StringComparison.OrdinalIgnoreCase);
+    var aboutPath = isPreview ? "/preview/about" : "/about";
+    var labPath = isPreview ? "/preview/lab" : "/diagnostics-lab";
 }
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@Model.Heading · Optimizely</title>
-    <style>
-        body { font: 16px/1.6 system-ui, sans-serif; margin: 0; color: #111827; background: #f8fafc; }
-        header { background: #0f172a; color: #e5e7eb; padding: 1rem 2rem; }
-        nav a { color: #e5e7eb; margin-right: 1.25rem; text-decoration: none; font-weight: 600; }
-        nav a:hover { text-decoration: underline; }
-        main { max-width: 52rem; margin: 3rem auto; padding: 0 1.5rem; }
-        h1 { font-size: 2.25rem; line-height: 1.15; }
-        a { color: #1d4ed8; }
-    </style>
-</head>
-<body>
-    <header>
-        <nav>
-            <a href="/">Home</a>
-            <a href="/about">About</a>
-            <a href="/contact">Contact</a>
-            <a href="/diagnostics-lab">Diagnostics Lab</a>
-        </nav>
-    </header>
-    <main>
-        <h1>@Model.Heading</h1>
-        @Html.Raw(Model.MainBody?.ToHtmlString() ?? string.Empty)
-    </main>
-</body>
-</html>
+<section class="hero">
+    <div class="container hero__inner">
+        <div>
+            <span class="eyebrow"><span class="spark"></span>Reignite × Optimizely</span>
+            <h1>Performance engineering for the <span class="grad">Optimizely experience</span></h1>
+            <p class="hero__lede">
+                Reignite finds the milliseconds your Optimizely CMS and Commerce delivery is losing —
+                then proves the fix with traces, dumps, and a diagnostics bot that speaks Teams.
+            </p>
+            <div class="hero__actions">
+                <a class="btn btn--primary" href="@labPath">Explore the diagnostics lab</a>
+                <a class="btn btn--ghost" href="@aboutPath">How it works</a>
+            </div>
+            <div class="hero__meta">
+                <span><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Built for CMS 12 and Commerce</span>
+                <span><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Production-safe collection</span>
+                <span><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Teams-native diagnostics</span>
+            </div>
+        </div>
+        <div class="console" aria-hidden="true">
+            <div class="console__bar">
+                <span class="lights"><i></i><i></i><i></i></span>
+                <span class="title">live-diagnostics · optimizely-edge</span>
+                <span class="live"><i></i>Live</span>
+            </div>
+            <div class="console__body">
+                <div class="metrics">
+                    <div class="metric"><div class="metric__label">p95 latency</div><div class="metric__value">412 ms</div></div>
+                    <div class="metric"><div class="metric__label">CPU</div><div class="metric__value warn">64%</div></div>
+                    <div class="metric"><div class="metric__label">Errors</div><div class="metric__value ok">0.1%</div></div>
+                </div>
+                <div class="chart">
+                    <span style="height:34%"></span><span style="height:48%"></span><span style="height:41%"></span>
+                    <span style="height:57%"></span><span style="height:52%"></span><span style="height:72%"></span>
+                    <span style="height:63%"></span><span style="height:55%"></span><span style="height:81%"></span>
+                    <span style="height:66%"></span><span style="height:58%"></span><span style="height:49%"></span>
+                    <span style="height:62%"></span><span style="height:44%"></span><span style="height:38%"></span>
+                    <span style="height:52%"></span><span style="height:46%"></span><span style="height:35%"></span>
+                </div>
+                <div class="chart-legend"><span>12:00</span><span>12:15</span><span>12:30</span><span>12:45</span></div>
+            </div>
+            <span class="float-chip a"><i></i>CPU spike captured</span>
+            <span class="float-chip b"><i></i>Trace uploaded</span>
+        </div>
+    </div>
+</section>
+
+<section class="trust">
+    <div class="container trust__inner">
+        <span class="trust__label">Built for</span>
+        <div class="trust__items">
+            <span><i></i>Optimizely CMS 12</span>
+            <span><i></i>Commerce</span>
+            <span><i></i>Personalization</span>
+            <span><i></i>Search &amp; Navigation</span>
+            <span><i></i>Azure</span>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="stats">
+            <div class="stat"><div class="stat__value">120+</div><div class="stat__label">Optimizely environments profiled</div></div>
+            <div class="stat"><div class="stat__value">37%</div><div class="stat__label">Median p95 improvement after a fix</div></div>
+            <div class="stat"><div class="stat__value">90s</div><div class="stat__label">From alert to first trace</div></div>
+            <div class="stat"><div class="stat__value">24/7</div><div class="stat__label">Agent coverage on production</div></div>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="padding-top: 0;">
+    <div class="container">
+        <div class="section-head">
+            <div class="kicker">The platform</div>
+            <h2>One loop: detect, diagnose, prove</h2>
+            <p>Reignite is a profiler, a control plane, and a Teams bot working as one performance practice — not a dashboard you have to babysit.</p>
+        </div>
+        <div class="features">
+            <article class="card">
+                <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></div>
+                <h3>Always-on profiler</h3>
+                <p>Collects CPU profiles and memory dumps when p95, CPU, GC, thread-pool, or lock thresholds cross — before the incident ends.</p>
+            </article>
+            <article class="card">
+                <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01"/></svg></div>
+                <h3>Diagnostics control plane</h3>
+                <p>A live read surface for agents, resolutions, metric alerts, and profiler snapshots — scoped per customer, server-side.</p>
+            </article>
+            <article class="card">
+                <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V6a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg></div>
+                <h3>Teams diagnostics bot</h3>
+                <p>Ask “agents” or “snapshots” in Teams or Web Chat and get an adaptive card with live, scoped diagnostics back.</p>
+            </article>
+            <article class="card">
+                <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></div>
+                <h3>Optimizely delivery expertise</h3>
+                <p>Content graph, catalog, personalization, search, Service Bus, and CDN — profiled in the context they actually run in.</p>
+            </article>
+            <article class="card">
+                <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></div>
+                <h3>Trace &amp; dump analysis</h3>
+                <p>Full-context diagnosis with a root-cause hypothesis, confidence, and evidence pointers your team can act on.</p>
+            </article>
+            <article class="card">
+                <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
+                <h3>Red-green fix verification</h3>
+                <p>Every fix ships with a test that fails before and passes after — then the same metrics prove it in production.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="padding-top: 0;">
+    <div class="container">
+        <div class="section-head">
+            <div class="kicker">How it works</div>
+            <h2>From symptom to shipped fix</h2>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <div class="step__num">01 · DETECT</div>
+                <h3>Watch what hurts</h3>
+                <p>Agents watch p95 latency, CPU, GC pressure, thread-pool starvation, and lock contention across your Optimizely delivery.</p>
+            </div>
+            <div class="step">
+                <div class="step__num">02 · DIAGNOSE</div>
+                <h3>Capture and explain</h3>
+                <p>A threshold crossing captures a trace or dump. The control plane assembles the full context into an actionable diagnosis.</p>
+            </div>
+            <div class="step">
+                <div class="step__num">03 · PROVE</div>
+                <h3>Ship and measure</h3>
+                <p>The fix lands behind a red-green test. The same metrics that found the issue prove the improvement.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="padding-top: 0;">
+    <div class="container split">
+        <div>
+            <div class="kicker">Optimizely-native</div>
+            <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem);">Built around how Optimizely actually runs</h2>
+            <p style="color: var(--muted);">We profile the layers that decide whether an Optimizely experience feels fast:</p>
+            <ul class="checklist">
+                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Content delivery, caching, and the content graph</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Commerce catalog, pricing, and cart pipelines</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Personalization and visitor-group evaluation</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Search &amp; Navigation query cost</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Service Bus integrations and background jobs</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>CDN, media, and image-transformation paths</li>
+            </ul>
+        </div>
+        <div class="panel">
+            <div class="panel__title"><span>Delivery profile</span><span class="tag">last 60 min</span></div>
+            <div class="graph">
+                <div class="graph__row"><b>Content load</b><span class="graph__bar"><i style="width: 62%"></i></span><span>62 ms</span></div>
+                <div class="graph__row"><b>Catalog query</b><span class="graph__bar"><i style="width: 44%"></i></span><span>44 ms</span></div>
+                <div class="graph__row"><b>Personalization</b><span class="graph__bar"><i style="width: 28%"></i></span><span>28 ms</span></div>
+                <div class="graph__row"><b>Service Bus</b><span class="graph__bar"><i style="width: 71%"></i></span><span>71 ms</span></div>
+                <div class="graph__row"><b>CDN hit ratio</b><span class="graph__bar"><i style="width: 93%"></i></span><span>93%</span></div>
+            </div>
+            <p style="color: var(--muted-2); font-size: 13px; margin: 18px 0 0;">Sample profile from the live test bed.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section section--tight" style="padding-top: 0;">
+    <div class="container">
+        <div class="card" style="padding: 30px 32px;">
+            <div class="kicker" style="margin-bottom: 8px;">@Model.Heading</div>
+            <div style="color: var(--muted); max-width: 52rem;">
+                @Html.Raw(Model.MainBody?.ToHtmlString() ?? string.Empty)
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="padding-top: 0;">
+    <div class="container">
+        <div class="cta">
+            <div class="kicker" style="color: rgba(255,255,255,.7);">See it running</div>
+            <h2>Put the diagnostics lab under load</h2>
+            <p>Trigger a memory spike, a CPU burn, a content-retrieval storm, or a Service Bus burst on a live Optimizely site — then watch it surface in the diagnostics bot.</p>
+            <a class="btn btn--green" href="@labPath">Open the diagnostics lab</a>
+        </div>
+    </div>
+</section>

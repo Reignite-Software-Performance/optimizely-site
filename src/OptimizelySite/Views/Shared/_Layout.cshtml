@@ -1,10 +1,4 @@
 @{
-    var requestPath = Context.Request.Path.Value ?? string.Empty;
-    var isPreview = requestPath.StartsWith("/preview", StringComparison.OrdinalIgnoreCase);
-    var basePath = ViewData["BasePath"] as string ?? (isPreview ? "/preview" : string.Empty);
-    var labPath = ViewData["LabPath"] as string ?? (isPreview ? "/preview/lab" : "/diagnostics-lab");
-    var homePath = string.IsNullOrEmpty(basePath) ? "/" : basePath;
-    string Link(string path) => string.IsNullOrEmpty(basePath) ? path : basePath + path;
     var pageTitle = ViewData["Title"] as string;
     var fullTitle = string.IsNullOrWhiteSpace(pageTitle)
         ? "Reignite × Optimizely — performance engineering"
@@ -15,6 +9,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
     <title>@fullTitle</title>
     <meta name="description" content="Reignite performance engineering for Optimizely CMS and Commerce — traces, dumps, a diagnostics control plane, and a Teams diagnostics bot.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,17 +20,17 @@
 <body>
     <header class="site-header">
         <div class="container site-header__inner">
-            <a class="brand" href="@homePath" aria-label="Reignite and Optimizely">
+            <a class="brand" href="/" aria-label="Reignite and Optimizely">
                 <span class="brand-chip"><img src="/images/reignite-logo.webp" alt="Reignite"></span>
                 <span class="brand-x">×</span>
                 <span class="brand-opt"><span class="dot"></span>Optimizely</span>
             </a>
             <nav class="site-nav" aria-label="Primary">
-                <a href="@homePath">Home</a>
-                <a href="@Link("/about")">About</a>
-                <a href="@Link("/contact")">Contact</a>
-                <a href="@labPath">Diagnostics Lab</a>
-                <a class="nav-cta" href="@Link("/contact")">Talk to us</a>
+                <a href="/">Home</a>
+                <a href="/about">About</a>
+                <a href="/contact">Contact</a>
+                <a href="/diagnostics-lab">Diagnostics Lab</a>
+                <a class="nav-cta" href="/contact">Talk to us</a>
             </nav>
         </div>
     </header>
@@ -48,7 +43,7 @@
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <a class="brand" href="@homePath">
+                    <a class="brand" href="/">
                         <span class="brand-chip"><img src="/images/reignite-logo.webp" alt="Reignite"></span>
                         <span class="brand-x">×</span>
                         <span class="brand-opt"><span class="dot"></span>Optimizely</span>
@@ -57,24 +52,24 @@
                 </div>
                 <div class="footer-col">
                     <h4>Platform</h4>
-                    <a href="@Link("/about")">Profiler</a>
-                    <a href="@Link("/about")">Diagnostics control plane</a>
-                    <a href="@Link("/about")">Teams diagnostics bot</a>
-                    <a href="@labPath">Diagnostics Lab</a>
+                    <a href="/about">Profiler</a>
+                    <a href="/about">Diagnostics control plane</a>
+                    <a href="/about">Teams diagnostics bot</a>
+                    <a href="/diagnostics-lab">Diagnostics Lab</a>
                 </div>
                 <div class="footer-col">
                     <h4>Company</h4>
-                    <a href="@Link("/about")">About</a>
-                    <a href="@Link("/contact")">Contact</a>
-                    <a href="@Link("/about")">Partners</a>
-                    <a href="@Link("/contact")">Careers</a>
+                    <a href="/about">About</a>
+                    <a href="/contact">Contact</a>
+                    <a href="/about">Partners</a>
+                    <a href="/contact">Careers</a>
                 </div>
                 <div class="footer-col">
                     <h4>Legal</h4>
-                    <a href="@Link("/about")">Privacy</a>
-                    <a href="@Link("/about")">Terms</a>
-                    <a href="@Link("/about")">Security</a>
-                    <a href="@Link("/about")">Status</a>
+                    <a href="/about">Privacy</a>
+                    <a href="/about">Terms</a>
+                    <a href="/about">Security</a>
+                    <a href="/about">Status</a>
                 </div>
             </div>
             <div class="footer-bottom">

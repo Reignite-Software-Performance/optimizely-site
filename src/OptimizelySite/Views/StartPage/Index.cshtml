@@ -2,10 +2,8 @@
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Performance engineering for Optimizely";
-    var requestPath = Context.Request.Path.Value ?? string.Empty;
-    var isPreview = requestPath.StartsWith("/preview", StringComparison.OrdinalIgnoreCase);
-    var aboutPath = isPreview ? "/preview/about" : "/about";
-    var labPath = isPreview ? "/preview/lab" : "/diagnostics-lab";
+    var aboutPath = "/about";
+    var labPath = "/diagnostics-lab";
 }
 <section class="hero">
     <div class="container hero__inner">

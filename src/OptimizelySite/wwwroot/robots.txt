@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+# Reignite × Optimizely lab/test sites: not for indexing.
